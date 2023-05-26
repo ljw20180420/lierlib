@@ -1,0 +1,41 @@
+###Basic Usage
+rearrangement -file input_file -ref_file reference_file -ALIGN_MAX 1 -THR_NUM 6
+
+### Parameters
+
+# Help Related
+-help: Display help.
+
+# Input Files
+-file: Input file of NGS reads.
+-ref_file: Reference file.
+
+# Aligning Engine
+-DIVCON: Use divide-and-conquer linear space method. This parameter is valid only if -ALIGN_MAX is 1. (default: false)
+
+# Aligning Parameters
+-s0: Mismatching score. (default: -3)
+-s1: Matching score. (default: +1)
+-u: Gap-extending penalty. (default: -2)
+-v: Gap-opening penalty. (default: -5)
+-alg_type: Method to scoring unaligned parts between aligned segments in query sequence and reference (-alg_type local|imbed|contain|local_imbed). (default: local)
+-per_thres: Percentage threshold of repeated reads. The same read may repeat many times in the file. Percentage of a read is calculated by (repeated # of the read in the file)/(total # of reads in the file). Reads with percentages less than -per_thres are excluded from analyses. (default: 0.0)
+
+# Output Options
+-mode: The method to explain the indel (-mode overlapping|nonoverlapping). (default: nonoverlapping)
+-ALIGN_MAX: The maximally reserved number of best alignments for each read (Each read may have several best alignments to the reference). (default: 5)
+
+# Analyze Indels
+-indel : Post-analysis for alignments. (default : false)
+
+# EM Configs
+-EM : Predict the cut distribution by EM algorithm. (default: false)
+-ini_alpha: Path to the file used to initialize the distribution of the left ligation ends. If not specified, a uniform distribution over the ligation range will be used. Note that the file must be consistent with the information in reference sequences.
+-ini_beta: Similar as -ini_alpha but for the right ligation ends.
+-ini_pi: Path to the file used to initialize the distribution of the middle insertions. If not specified, a uniform distribution over all possible middle insertions upper to length specified by -MID_MAX will be used.
+-MID_MAX: The maximal length of middle insertion. (default: 0)
+-thres: The terminal threshold for EM algorithm. (default: 0.000001)
+
+# Parallel Options
+-SEQ_BATCH: Set the number of reads passed in one time. (default: 300)
+-THR_NUM: Thread number. (default: the hardware available threads)
