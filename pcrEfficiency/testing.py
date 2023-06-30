@@ -72,7 +72,7 @@ def actual_prog(seq, forward, reverse) :
 	ampliconList[0].setEfficiency(myListOfEfficiencies[0])
 	#print name
 	effect = round(float("".join(myListOfEfficiencies)),2)
-	print str(effect)+" amplicon are synthesized from 1 template at each cycle of the PCR for the this PCR reaction"
+	print(str(effect)+" amplicon are synthesized from 1 template at each cycle of the PCR for the this PCR reaction")
 
 
 	call(["rm", "gamResult.data"])
@@ -82,11 +82,11 @@ name = ""
 
 
 if len(sys.argv) == 1 :
-	print "Please input sequence, forward primer sequence, and reverse primer sequence\n ./testing.py target_sequence forward_primer_sequence reverse_sequence"
+	print("Please input sequence, forward primer sequence, and reverse primer sequence\n ./testing.py target_sequence forward_primer_sequence reverse_sequence")
 
 if len(sys.argv) <= 2 and len(sys.argv) > 1:
 	seq = str(sys.argv[1]).upper()
-	print "No primers input\nITS primers by default\nforward : TCCTCCGCTTATTGATATGC\n reverse = GGAAGTAAAAGTCGTAACAAGG"
+	print("No primers input\nITS primers by default\nforward : TCCTCCGCTTATTGATATGC\n reverse = GGAAGTAAAAGTCGTAACAAGG")
 	forward = "TCCTCCGCTTATTGATATGC"
 	reverse = "GGAAGTAAAAGTCGTAACAAGG"
 	actual_prog(seq,forward,reverse)

@@ -1,13 +1,14 @@
-import os, collections, subprocess, pandas, bioframe, itertools, Bio.Seq, pysam, numpy, more_itertools, matplotlib.pyplot, pdb, seaborn, shutil, re, warnings
+import os, collections, subprocess, pandas, bioframe, itertools, Bio.Seq, pysam, numpy, more_itertools, matplotlib.pyplot, pdb, seaborn, shutil, re, warnings, gzip
 
 ### count read numbers and sort by numbers
 def count_fastq(fastq_file):
-    with open(fastq_file, 'r') as f:
+    with gzip.open(fastq_file, 'r') as f:
         duplines = collections.Counter(f.readlines()[1::4])
         with open(f'{fastq_file}.txt', 'w') as fw, open(f'{fastq_file}.fa', 'w') as fa:
             for i, seq_c in enumerate(duplines.most_common(), start=1):
-                _ = fw.write(f'{seq_c[0].strip()}\t{seq_c[1]}\n')
-                _ = fa.write(f'>seq{i}\n{seq_c[0]}')
+                dec_seq = seq_c[0].decode()
+                _ = fw.write(f"{dec_seq[:-1]}\t{seq_c[1]}\n")
+                _ = fa.write(f'>seq{i}\n{dec_seq}')
     
     return f'{fastq_file}.txt', f'{fastq_file}.fa'
 
@@ -24,7 +25,10 @@ def align(fasta_file, genome_file, excu, msn=1, mr=4, T=-10, dT=-5, bs=10, tz=24
 ### use the rearrangement to align reads
 def rearrangement(count_file, threads, excu, genome_file, refext, chr1=None, cut1=None, strand1=None, chr2=None, cut2=None, strand2=None):
     genome = bioframe.load_fasta(genome_file)
-    with open(os.path.join(os.path.dirname(count_file), "reference.txt"), 'w') as f:
+
+    cwd = os.getcwd()
+    os.chdir(os.path.dirname(count_file))
+    with open("reference.ref", 'w') as f:
         ref1 = genome[chr1].ff.fetch(chr1, cut1-refext, cut1+refext)
         if strand1=='-':
             ref1 = Bio.Seq.Seq(ref1).reverse_complement().__str__()
@@ -34,10 +38,7 @@ def rearrangement(count_file, threads, excu, genome_file, refext, chr1=None, cut
             if strand2=='-':
                 ref2 = Bio.Seq.Seq(ref2).reverse_complement().__str__()
             _ = f.write(f"{refext}\t{refext}\t{refext}\n{ref2}\n{refext*2}\t{refext*2}\t{refext*2}\n")
-
-    cwd = os.getcwd()
-    os.chdir(os.path.dirname(count_file))
-    subprocess.check_output(f"{excu} -file {count_file} -ref_file reference.txt -ALIGN_MAX 1 -THR_NUM {threads}", shell=True)
+    subprocess.check_output(f"{excu} -file {count_file} -ref_file reference.ref -ALIGN_MAX 1 -THR_NUM {threads}", shell=True)
     os.chdir(cwd)
 
 ### reformat the output of rearrange to that of GAP
@@ -119,7 +120,7 @@ def to_sam(fasta_file):
     for row in bioframe.read_table('/home/ljw/hg19_with_bowtie2_index/hg19.chrom.sizes', schema=['chrom', 'length']).itertuples():
         ref2len[row.chrom] = row.length
     # scan all .ext and .alg files
-    files = [os.path.join(os.path.dirname(fasta_file),file) for file in os.listdir(os.path.dirname(fasta_file)) if file.endswith('.ext')]
+    files = [os.path.join(os.path.dirname(fasta_file),file) for file in os.listdir(os.path.dirname(fasta_file)) if file.endswith('.ext') and file.startswith(os.path.basename(fasta_file))]
     with open(f"{fasta_file}.sam", "w") as f:
         for file in files:
             # read all ext results
@@ -310,7 +311,7 @@ def get_indel(fasta_file, count_file, genome_file, region1, strand1, cut1, regio
     ref2len = {}
     for row in bioframe.read_table('/home/ljw/hg19_with_bowtie2_index/hg19.chrom.sizes', schema=['chrom', 'length']).itertuples():
         ref2len[row.chrom] = row.length
-    files = [os.path.join(os.path.dirname(fasta_file),file) for file in os.listdir(os.path.dirname(fasta_file)) if file.endswith('.ext')]
+    files = [os.path.join(os.path.dirname(fasta_file),file) for file in os.listdir(os.path.dirname(fasta_file)) if file.endswith('.ext') and file.startswith(os.path.basename(fasta_file))]
     genome = bioframe.load_fasta(genome_file)
     ref1 = genome[region1[0]].ff.fetch(region1[0],region1[1],region1[2]).upper()
     ref2 = genome[region2[0]].ff.fetch(region2[0],region2[1],region2[2]).upper()
@@ -686,7 +687,7 @@ def count_types(best_file, count_file, chr1, cut1, strand1, chr2, cut2, strand2)
     f.savefig(f"{best_file}.{chr1}.{chr2}.{cut1}.{cut2}.{strand1}.{strand2}.count.pdf")
 
 def summary_count(best_files, count_files, chrss1, chrss2, cutss1, cutss2, strandss1, strandss2):
-    tables = [[]] * len(chrss1[0])
+    tables = [[] for _ in range(len(chrss1[0]))]
     for best_file, count_file, chrs1, chrs2, cuts1, cuts2, strands1, strands2 in zip(best_files, count_files, chrss1, chrss2, cutss1, cutss2, strandss1, strandss2):
         total_reads = total_reads = sum(bioframe.read_table(count_file, schema=["seq", "count"])["count"])
         best_indel = pandas.read_csv(best_file, sep='\t')
@@ -700,7 +701,7 @@ def summary_count(best_files, count_files, chrss1, chrss2, cutss1, cutss2, stran
             Del = best_indel['del1'].astype("int64")[bool].values + best_indel['del2'].astype("int64")[bool].values
             Ins = best_indel['ins1'].astype("int64")[bool].values + best_indel['ins2'].astype("int64")[bool].values
             histDel = numpy.bincount(Del, best_indel['count'][bool].values, minlength=101)
-            histIns = numpy.bincount(Ins, best_indel['count'][bool].values, minlength=3)
+            histIns = numpy.bincount(Ins, best_indel['count'][bool].values, minlength=4)
             tables[ii][-1].extend(histIns[1:4])
             tables[ii][-1].extend(histDel[1:101])
             tables[ii][-1].append(sum(histDel[101:]))
@@ -710,7 +711,7 @@ def summary_count(best_files, count_files, chrss1, chrss2, cutss1, cutss2, stran
             tables[ii][-1].append(total_reads)
             tables[ii][-1].append(filter_total)
     for ii in range(len(chrss1[0])):
-        with open(os.path.join(os.path.dirname(os.path.dirname(best_files[0])), f"{get_title(cutss1[0][ii],strandss1[0][ii],cutss2[0][ii],strandss2[0][ii])}.summary"), "w") as f:
+        with open(os.path.join(os.path.dirname(best_files[0]), f"{get_title(cutss1[0][ii],strandss1[0][ii],cutss2[0][ii],strandss2[0][ii])}.summary"), "w") as f:
             VNs = '\t'.join(['sample', 'insert1bp_count', 'insert2bp_count', 'insert3bp_count'] + [f"delete{i}bp_count" for i in range(1,101)] + ['delete_over_100bp_count', 'insert1bp_percent', 'insert2bp_percent', 'insert3bp_percent'] + [f"delete{i}bp_percent" for i in range(1,101)] + ['delete_over_100bp_percent', 'total_num', 'filter_total'])
             f.write(f"{VNs}\n")
             for row in tables[ii]:
