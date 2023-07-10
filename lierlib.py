@@ -210,7 +210,7 @@ def to_sam(fasta_file):
                     # set TAGs
                     TAGs = []
                     for i in range(len(query_segs)):
-                        TAGs.append(f"XX:i:{i+1}\tNH:i:{MAPIDX+1}")
+                        TAGs.append(f"XX:i:{i}\tXZ:i:{MAPIDX}")
                     # set TLENs
                     TLENs = []
                     if len(query_segs)==1:
