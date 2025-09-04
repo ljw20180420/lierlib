@@ -133,6 +133,8 @@ pcrEfficiency.PCRpredict.call(["rm", "primerDataForR.dat"])
 
 primerPairs["effsnorm1"] = primerPairs["effs"] / numpy.max(primerPairs["effs"])
 
+primerPairs.to_csv("effs.rearr.tsv", sep = "\t", index = False)
+
 f, ax = matplotlib.pyplot.subplots(figsize=(30,30))
 seaborn.barplot(data=primerPairs, x="name", y="effs", ax=ax)
 for patch in ax.patches:
